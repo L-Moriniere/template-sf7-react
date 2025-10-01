@@ -35,6 +35,21 @@ create-db:
 psql:
 	docker compose exec database psql -U root -d app
 
+phpstan:
+	docker compose exec backend php vendor/bin/phpstan analyse src
+
+phpunit:
+	docker compose exec backend php bin/phpunit
+
+eslint:
+	docker compose exec frontend npx eslint src/
+
+prettier:
+	docker compose exec frontend npx prettier --check src/
+
+typecheck:
+	docker compose exec frontend npx tsc --noEmit
+
 frontend-install:
 	cd frontend && npm install
 
@@ -43,4 +58,3 @@ frontend-build:
 
 frontend-dev:
 	cd frontend && npm run dev
-
