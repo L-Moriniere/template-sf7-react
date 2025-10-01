@@ -1,0 +1,62 @@
+# Fichier docker-compose pour orchestrer l'API Symfony, le frontend React et la base de données PostgreSQL
+version: '3.8'
+
+services:
+  backend:
+    # Service pour l'API Symfony
+    build:
+      context: . # Construit l'image à partir de la racine du projet
+      dockerfile: Dockerfile.backend # Utilise le Dockerfile dédié au backend
+    container_name: symfony_api # Nom du conteneur
+    restart: unless-stopped # Redémarre sauf arrêt manuel
+    ports:
+      - "8000:8000" # Expose le port 8000 pour accéder à l'API
+    volumes:
+      - ./:/app:rw # Monte le code source dans le conteneur
+      - /app/vendor
+    depends_on:
+      - database # Démarre après la base de données
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-!c0L3o!}@database:5432/${POSTGRES_DB:-coleoptedex} # URL de connexion à la base
+    entrypoint: ["sh", "-c", "composer install --no-interaction --prefer-dist --optimize-autoloader && php -S 0.0.0.0:8000 -t public"]
+
+  frontend:
+    # Service pour le frontend React
+    build:
+      context: ./frontend # Construit l'image à partir du dossier frontend
+      dockerfile: Dockerfile.frontend # Utilise le Dockerfile dédié au frontend
+    container_name: react_frontend # Nom du conteneur
+    restart: unless-stopped # Redémarre sauf arrêt manuel
+    ports:
+      - "3000:3000" # Expose le port 3000 pour accéder à l'interface React
+    volumes:
+      - ./frontend:/app:rw # Monte le code source du frontend
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Permet le hot reload sur certains systèmes
+    entrypoint: ["sh", "-c", "npm install && npm run dev -- --host"]
+
+  database:
+    # Service pour la base de données PostgreSQL
+    image: postgres:${POSTGRES_VERSION:-16}-alpine # Utilise l'image officielle Postgres
+    container_name: postgres_db # Nom du conteneur
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app} # Nom de la base
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!c0L3o!} # Mot de passe
+      POSTGRES_USER: ${POSTGRES_USER:-root} # Utilisateur
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-root}"] # Vérifie que la base est prête
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - database_data:/var/lib/postgresql/data:rw # Persistance des données
+    ports:
+      - "5432:5432" # Expose le port 5432 pour accéder à PostgreSQL
+
+volumes:
+  database_data: # Volume pour la base de données
+
+networks:
+  default:
+    driver: bridge # Utilise le réseau bridge par défaut

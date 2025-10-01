@@ -1,0 +1,15 @@
+# Dockerfile pour le frontend React
+FROM node:lts
+
+WORKDIR /app
+
+# Copie les fichiers de dépendances
+COPY package*.json ./
+RUN npm install
+
+# Copie le code source du frontend
+COPY . .
+EXPOSE 3000
+
+# Commande de démarrage du serveur React
+CMD ["npm", "run", "dev", "--", "--host"]
